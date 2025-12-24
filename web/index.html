@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PocketCHIP Web UI</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <h1>PocketCHIP Web UI</h1>
+
+    <section class="card">
+      <h2>CDC Internet Sharing</h2>
+      <p>Status: <span id="status">lade...</span></p>
+
+      <div class="row">
+        <button id="btnUp">Aktivieren</button>
+        <button id="btnDown" class="secondary">Deaktivieren</button>
+        <button id="btnRefresh" class="secondary">Aktualisieren</button>
+      </div>
+
+      <pre id="log" aria-label="log"></pre>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
