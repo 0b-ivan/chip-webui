@@ -1,29 +1,43 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PocketCHIP Web UI</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PocketCHIP – CDC WebUI</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; }
+    .box { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    button { padding: 10px 12px; margin-right: 8px; }
+    pre { background: #f6f6f6; padding: 10px; border-radius: 6px; overflow: auto; }
+    small { color: #555; }
+  </style>
 </head>
 <body>
-  <main>
-    <h1>PocketCHIP Web UI</h1>
+  <h1>PocketCHIP – CDC WebUI</h1>
 
-    <section class="card">
-      <h2>CDC Internet Sharing</h2>
-      <p>Status: <span id="status">lade...</span></p>
+  <div class="box">
+    <h2>CDC Internet Sharing</h2>
+    <p>Diese UI steuert <code>cdc-share</code> und lauscht nur auf <code>usb0</code>.</p>
+    <p>
+      <button onclick="run('status')">Status</button>
+      <button onclick="run('up')">CDC an</button>
+      <button onclick="run('down')">CDC aus</button>
+    </p>
+    <pre id="out">Bereit.</pre>
+    <small>Hinweis: Diese Oberfläche ist absichtlich minimal und ressourcenschonend.</small>
+  </div>
 
-      <div class="row">
-        <button id="btnUp">Aktivieren</button>
-        <button id="btnDown" class="secondary">Deaktivieren</button>
-        <button id="btnRefresh" class="secondary">Aktualisieren</button>
-      </div>
-
-      <pre id="log" aria-label="log"></pre>
-    </section>
-  </main>
-
-  <script src="app.js"></script>
+<script>
+async function run(action){
+  const out = document.getElementById('out');
+  out.textContent = 'Läuft…';
+  try {
+    const r = await fetch('/cgi-bin/cdc.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+    out.textContent = await r.text();
+  } catch (e) {
+    out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+  }
+}
+</script>
 </body>
 </html>
