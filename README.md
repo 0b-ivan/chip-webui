@@ -1,137 +1,116 @@
-# PocketCHIP CDC Web UI
+# PocketCHIP CDC WebUI
 
-Minimalistisches, ressourcenschonendes Webinterface zur Steuerung von
-USB-CDC Internet Sharing auf dem **PocketCHIP** (Debian Buster).
+Pragmatisches, ressourcenschonendes Webinterface (HTML + BusyBox `httpd` + CGI), das **nur auf `usb0`** lauscht und die USB‑CDC‑Konfiguration steuert.
 
-Die Oberfläche läuft ausschließlich über **usb0 (192.168.7.1)** und ist
-dafür gedacht, den PocketCHIP unkompliziert als
-USB-Ethernet-Gateway zu nutzen (z. B. Laptop ↔ PocketCHIP ↔ WLAN).
+## Konzept
 
----
+Es gibt zwei getrennte Ebenen:
 
-## Features
+### 1) CDC Base (immer aktiv)
+**Ziel:** Sobald der PocketCHIP per USB angeschlossen ist, soll die CDC‑Schnittstelle funktionieren.
 
-- Aktivieren / Deaktivieren von CDC Internet Sharing
-- Statusanzeige (usb0, uplink, ip_forward, iptables, dnsmasq)
-- Läuft mit:
-  - `busybox httpd`
-  - POSIX-Shell (`/bin/sh`)
-- Keine Datenbank
-- Kein PHP
-- Kein Framework
-- Kein JavaScript-Buildsystem
+- `usb0` bekommt **statisch** `192.168.7.1/24`
+- DHCP für den Client über `dnsmasq` (z. B. `192.168.7.2–192.168.7.50`)
+- Die WebUI lauscht auf `192.168.7.1:8080`
 
-**Ziel:** maximale Robustheit bei minimalem Ressourcenverbrauch.
+### 2) CDC Internet Sharing (umschaltbar)
+**Ziel:** Optionales Routing/NAT vom USB‑Client ins Uplink‑Netz (meist `wlan0`).
 
----
+- IPv4 Forwarding (`net.ipv4.ip_forward=1`)
+- `iptables` NAT (MASQUERADE) und Forward‑Regeln für `usb0 → uplink`
+- Uplink‑Interface wird über Default‑Route erkannt (Fallback z. B. `wlan0`)
 
-## Architektur (Kurzfassung)
+## Komponenten
 
-```
-Browser (Client)
-  │
-  │ HTTP (usb0, 192.168.7.1:8080)
-  ▼
-busybox httpd
-  │
-  │ CGI
-  ▼
-cdc.cgi
-  │
-  │ sudo (NOPASSWD, eingeschränkt)
-  ▼
-cdc-share (Shell)
-  │
-  ├─ ip / iptables
-  ├─ dnsmasq
-  └─ sysctl (ip_forward)
-```
+### Services / Timer
 
----
+- `cdc-base.service`  
+  setzt `usb0=192.168.7.1/24` und aktiviert DHCP (dnsmasq‑Snippet)
 
-## Voraussetzungen
+- `cdc-inet` (Script)  
+  schaltet nur Internet‑Sharing (NAT/Forwarding) ein/aus
 
-- PocketCHIP
-- Debian 10 (buster)
-- Pakete:
-  - busybox
-  - dnsmasq
-  - iptables (legacy)
-  - sudo
-- Netzwerk:
-  - `usb0` (CDC Gadget)
-  - `wlan0` oder anderes Default-Uplink-Interface
+- `chip-webui.service`  
+  startet BusyBox `httpd` auf `192.168.7.1:8080` und bedient CGI‑Endpoints
 
----
+### Scripts
 
-## Installation (Kurzform)
+- `/usr/local/sbin/cdc-base`  
+  Base‑Setup: USB‑IP + DHCP (dnsmasq)
+
+- `/usr/local/sbin/cdc-inet`  
+  Internet‑Sharing Setup: ip_forward + iptables
+
+### WebUI
+
+- statisch: `web/index.html`, optional `web/style.css`, `web/app.js`
+- CGI: `web/cgi-bin/*.cgi`
+
+## CGI Endpoints (aktuell)
+
+### CDC Internet Sharing
+
+- `GET /cgi-bin/cdc.cgi?action=status`  
+  zeigt `uplink_if=…`, `ip_forward=…` sowie passende iptables‑Regeln
+
+- `GET /cgi-bin/cdc.cgi?action=on`  
+  aktiviert NAT/Forwarding (usb0 → uplink)
+
+- `GET /cgi-bin/cdc.cgi?action=off`  
+  deaktiviert NAT/Forwarding
+
+Beispiel:
 
 ```sh
-git clone https://github.com/<user>/chip-webui.git
-cd chip-webui
+curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=status"
+curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=on"
+curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=off"
 ```
 
-Systemweite Komponenten:
-- `/usr/local/sbin/cdc-share`
-- `/etc/sudoers.d/chip-webui`
-- `/etc/systemd/system/chip-webui.service`
+## sudoers (wichtig)
 
-Webroot:
-- `~/chip-webui/web`
+Die WebUI ruft die Scripts via `sudo -n` auf. Dafür braucht es eine Whitelist:
 
-Service aktivieren:
+Datei: `/etc/sudoers.d/chip-webui`
+
+```sudoers
+chip ALL=(root) NOPASSWD:   /usr/local/sbin/cdc-inet status,   /usr/local/sbin/cdc-inet on,   /usr/local/sbin/cdc-inet off
+```
+
+## Start/Stop
+
 ```sh
 sudo systemctl daemon-reload
+
+# Base
+sudo systemctl enable --now cdc-base.service
+
+# WebUI
 sudo systemctl enable --now chip-webui.service
+systemctl status chip-webui.service --no-pager -l
 ```
 
-Aufruf vom Client:
+## Troubleshooting
+
+### WebUI startet nicht: “Address already in use”
+Prüfen, ob bereits ein `busybox httpd` auf `192.168.7.1:8080` läuft:
+
+```sh
+sudo ss -ltnp | grep ':8080' || true
 ```
-http://192.168.7.1:8080/
+
+### dnsmasq bindet nicht: “Address already in use”
+In der Regel läuft schon ein dnsmasq (systemweit). Lösung ist ein **Snippet** unter `/etc/dnsmasq.d/` und dann `systemctl restart dnsmasq`.
+
+### “sudo: a password is required” in CGI
+Whitelist in `/etc/sudoers.d/chip-webui` prüfen und:
+
+```sh
+sudo visudo -c
+sudo -n -l
 ```
 
----
-
-## Sicherheit
-
-**Bewusste Entscheidungen:**
-
-- Webinterface lauscht **nur auf usb0**
-- Keine Authentifizierung (physischer Zugriff erforderlich)
-- `sudo` ist strikt auf `cdc-share {status,up,down}` begrenzt
-- `cdc-share` verweigert Änderungen, wenn eine SSH-Session über `192.168.7.x` läuft
-  (Schutz vor Selbst-Aussperrung)
-
-**Nicht geeignet für:**
-- Internet-exponierte Systeme
-- Mehrbenutzer-Umgebungen
-- Untrusted Clients
-
----
-
-## Status
-
-**Reifegrad:** experimentell / funktional  
-**Getestet auf:** PocketCHIP, Debian Buster  
-**Nicht getestet auf:** neuere Debian-Versionen
-
----
-
-## Motivation
-
-Der PocketCHIP ist langsam, alt und limitiert – und genau deshalb
-ist dieses Projekt **absichtlich simpel**.
-
-Wenn etwas mit:
-- weniger RAM
-- weniger CPU
-- weniger Abhängigkeiten
-
-lösbar ist, dann wird es hier so umgesetzt.
-
----
-
-## Lizenz
-
-MIT
+## Nächste Schritte (geplant)
+- WLAN: Toggle, Scan SSIDs, Connect via `nmcli`
+- UI: klarere Trennung „CDC Base“ vs „Internet Sharing“
 
