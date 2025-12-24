@@ -1,0 +1,75 @@
+#!/bin/sh
+set -eu
+
+USB_IF="usb0"
+
+detect_uplink() {
+  # 1) default route
+  d="$(ip -4 route show default 2>/dev/null | awk 'NR==1{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}')"
+  [ -n "${d:-}" ] && { echo "$d"; return 0; }
+
+  # 2) fallback
+  for i in wlan0 eth0; do
+    ip -4 addr show dev "$i" 2>/dev/null | grep -q "inet " && { echo "$i"; return 0; }
+  done
+
+  echo ""
+}
+
+UPLINK_IF="$(detect_uplink)"
+
+have_iptables() { command -v iptables >/dev/null 2>&1; }
+
+status() {
+  echo "uplink_if=${UPLINK_IF:-}"
+  if [ -r /proc/sys/net/ipv4/ip_forward ]; then
+    echo "ip_forward=$(cat /proc/sys/net/ipv4/ip_forward)"
+  else
+    echo "ip_forward=?"
+  fi
+
+  if have_iptables; then
+    [ -n "${UPLINK_IF:-}" ] && {
+      iptables -t nat -S 2>/dev/null | grep -F -- "POSTROUTING -o $UPLINK_IF -j MASQUERADE" || true
+      iptables -S FORWARD 2>/dev/null | grep -F -- "-i $USB_IF -o $UPLINK_IF -j ACCEPT" || true
+      iptables -S FORWARD 2>/dev/null | grep -F -- "-i $UPLINK_IF -o $USB_IF -m state --state RELATED,ESTABLISHED -j ACCEPT" || true
+    }
+  else
+    echo "iptables=missing"
+  fi
+}
+
+on() {
+  [ -n "${UPLINK_IF:-}" ] || { echo "ERROR: no uplink interface detected"; exit 1; }
+
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+
+  if have_iptables; then
+    iptables -t nat -C POSTROUTING -o "$UPLINK_IF" -j MASQUERADE 2>/dev/null || \
+      iptables -t nat -A POSTROUTING -o "$UPLINK_IF" -j MASQUERADE
+
+    iptables -C FORWARD -i "$USB_IF" -o "$UPLINK_IF" -j ACCEPT 2>/dev/null || \
+      iptables -A FORWARD -i "$USB_IF" -o "$UPLINK_IF" -j ACCEPT
+
+    iptables -C FORWARD -i "$UPLINK_IF" -o "$USB_IF" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || \
+      iptables -A FORWARD -i "$UPLINK_IF" -o "$USB_IF" -m state --state RELATED,ESTABLISHED -j ACCEPT
+  fi
+
+  echo "OK: Internet sharing enabled ($USB_IF -> $UPLINK_IF)"
+}
+
+off() {
+  if [ -n "${UPLINK_IF:-}" ] && have_iptables; then
+    iptables -t nat -D POSTROUTING -o "$UPLINK_IF" -j MASQUERADE 2>/dev/null || true
+    iptables -D FORWARD -i "$USB_IF" -o "$UPLINK_IF" -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -i "$UPLINK_IF" -o "$USB_IF" -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || true
+  fi
+  echo "OK: Internet sharing disabled"
+}
+
+case "${1:-status}" in
+  status) status ;;
+  on) on ;;
+  off) off ;;
+  *) echo "usage: $0 {status|on|off}" >&2; exit 2 ;;
+esac

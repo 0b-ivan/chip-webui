@@ -20,6 +20,14 @@ Es gibt zwei getrennte Ebenen:
 - `iptables` NAT (MASQUERADE) und Forward‑Regeln für `usb0 → uplink`
 - Uplink‑Interface wird über Default‑Route erkannt (Fallback z. B. `wlan0`)
 
+
+## Installation
+
+```bash
+git clone https://github.com/USER/chip-webui.git
+cd chip-webui
+sudo ./install.sh
+
 ## Komponenten
 
 ### Services / Timer
