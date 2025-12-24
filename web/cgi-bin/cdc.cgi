@@ -1,6 +1,5 @@
 #!/bin/sh
 set -eu
-
 echo "Content-Type: text/plain; charset=utf-8"
 echo ""
 
@@ -12,7 +11,9 @@ case "$ACTION" in
   *) echo "ERROR: action must be status|on|off"; exit 0 ;;
 esac
 
-sudo -n /usr/local/sbin/cdc-inet "$ACTION" 2>&1 || {
+if sudo -n /usr/local/sbin/cdc-inet "$ACTION" 2>&1; then
+  exit 0
+else
   echo "ERROR: sudo/cdc-inet failed"
   exit 0
-}
+fi
