@@ -16,15 +16,20 @@
   <h1>PocketCHIP – CDC WebUI</h1>
 
   <div class="box">
+    <h2>CDC Base</h2>
+    <p><b>Immer aktiv</b>, sobald USB angeschlossen ist (usb0=192.168.7.1/24 + DHCP).</p>
+  </div>
+
+  <div class="box">
     <h2>CDC Internet Sharing</h2>
-    <p>Diese UI steuert <code>cdc-share</code> und lauscht nur auf <code>usb0</code>.</p>
+    <p>Hier schaltest du nur das Internet-Routing/NAT (usb0 → uplink) ein/aus.</p>
     <p>
       <button onclick="run('status')">Status</button>
-      <button onclick="run('up')">CDC an</button>
-      <button onclick="run('down')">CDC aus</button>
+      <button onclick="run('on')">Internet an</button>
+      <button onclick="run('off')">Internet aus</button>
     </p>
     <pre id="out">Bereit.</pre>
-    <small>Hinweis: Diese Oberfläche ist absichtlich minimal und ressourcenschonend.</small>
+    <small>Minimal gehalten (busybox httpd + CGI).</small>
   </div>
 
 <script>
