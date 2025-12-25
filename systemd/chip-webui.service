@@ -1,0 +1,26 @@
+[Unit]
+Description=PocketCHIP CDC Web UI (busybox httpd)
+After=network-online.target cdc-base.service
+Wants=network-online.target cdc-base.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+Environment=WEBROOT=/home/chip/chip-webui/web
+
+# Sicherstellen, dass CDC Base läuft (usb0=192.168.7.1/24)
+ExecStartPre=/bin/systemctl start cdc-base.service
+
+# Warten bis usb0 IP da ist
+ExecStartPre=/bin/sh -c 'for i in 1 2 3 4 5 6 7 8 9 10; do ip -4 addr show dev usb0 | grep -q "192.168.7.1/24" && exit 0; sleep 0.2; done; echo "usb0 has no 192.168.7.1/24"; exit 1'
+
+# Port 80 binden als root, danach UID/GID auf chip droppen
+ExecStart=/bin/busybox httpd -f -p 192.168.7.1:80 -h ${WEBROOT} -u chip:chip
+
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

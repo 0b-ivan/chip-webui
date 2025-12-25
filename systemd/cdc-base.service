@@ -1,0 +1,12 @@
+[Unit]
+Description=PocketCHIP CDC base (usb0 IP + DHCP)
+After=network.target NetworkManager.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/cdc-base up
+
+[Install]
+WantedBy=multi-user.target
