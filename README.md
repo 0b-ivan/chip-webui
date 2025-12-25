@@ -74,6 +74,34 @@ curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=status"
 curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=on"
 curl -s "http://192.168.7.1:8080/cgi-bin/cdc.cgi?action=off"
 ```
+## 📡 WLAN – Scan & Verbinden
+
+Der PocketCHIP nutzt **NetworkManager (`nmcli`)**, um WLAN-Verbindungen
+zu scannen und herzustellen.  
+Diese Funktion ist sowohl **per CLI** als auch über die **CDC WebUI**
+verfügbar.
+
+Das Design ist bewusst **minimalistisch und ressourcenschonend**:
+
+- kein eigenes `wpa_supplicant`-Handling
+- kein Framework
+- kein dauerhafter Daemon
+- Steuerung ausschließlich über `nmcli`
+
+---
+
+### Voraussetzungen
+
+- Debian (PocketCHIP)
+- `NetworkManager` aktiv
+- WLAN-Interface: `wlan0`
+- Benutzer `chip` ist Mitglied der Gruppe `netdev`
+
+Prüfen:
+
+```sh
+systemctl is-active NetworkManager
+nmcli device status
 
 ## sudoers (wichtig)
 
