@@ -1,0 +1,14 @@
+# chip-webui: erlaubte WebUI-Aktionen ohne Passwort
+
+# CDC Internet Sharing (NAT)
+chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet status
+chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet on
+chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet off
+
+# WLAN (scan/status/connect) - wird später von wifi.cgi genutzt
+chip ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi on
+chip ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi off
+chip ALL=(root) NOPASSWD: /usr/bin/nmcli -t -f IN-USE,SSID,SECURITY,SIGNAL device wifi list
+chip ALL=(root) NOPASSWD: /usr/bin/nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device
+chip ALL=(root) NOPASSWD: /usr/bin/nmcli -t -f GENERAL.STATE,GENERAL.CONNECTION dev show wlan0
+# Connect erlauben wir nur über einen Wrapper (besser als wildcard). Kommt als nächstes.
