@@ -1,0 +1,28 @@
+[Unit]
+Description=PocketCHIP Sniffer (usb0 tcpdump)
+Documentation=https://your-repo-url
+After=sys-subsystem-net-devices-usb0.device
+Wants=sys-subsystem-net-devices-usb0.device
+
+[Service]
+Type=simple
+
+# Sniffer MUSS als root laufen (tcpdump + raw sockets)
+User=root
+Group=root
+
+ExecStart=/usr/local/sbin/chip-sniffer-daemon usb0
+
+# Robustheit
+Restart=on-failure
+RestartSec=2
+
+# Sicherheit (minimal, aber praktikabel)
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=yes
+ReadWritePaths=/home/chip/chip-webui/web/captures
+
+[Install]
+WantedBy=multi-user.target

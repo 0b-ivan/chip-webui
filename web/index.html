@@ -81,6 +81,22 @@
         <small class="hint">Hinweis: Passwort wird per POST gesendet (nicht in URL), aber trotzdem: nur über usb0 erreichbar.</small>
       </div>
     </section>
+
+    <!--Card 4 -->
+    <div class="card" style="margin-top:16px;">
+      <h2>Sniffer (usb0)</h2>
+      <p>PCAP-Mitschnitt für Analyse (offline). Rotiert automatisch, damit der Speicher nicht vollläuft.</p>
+
+      <div class="row">
+        <button onclick="sniffer('status')">Status</button>
+        <button onclick="sniffer('start')">Start</button>
+        <button class="secondary" onclick="sniffer('stop')">Stop</button>
+      </div>
+
+      <pre id="snifferOut">Bereit.</pre>
+      <small>Downloads unter <code>/captures/</code> (z. B. <code>http://192.168.7.1/captures/...</code>).</small>
+    </div>
+
   </div>
 
   <div class="footer">
@@ -177,6 +193,17 @@
     });
 
     $('wifiOut').textContent = txt;
+  }
+  async function sniffer(action){
+    const out = document.getElementById('snifferOut');
+    out.textContent = 'Läuft…';
+    try {
+      const r = await fetch('/cgi-bin/sniffer.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+      const t = await r.text();
+      out.textContent = t;
+    } catch (e) {
+      out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+    }
   }
 
   // Initialer Auto-Status (optional)

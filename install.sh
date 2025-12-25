@@ -12,6 +12,14 @@ echo "[*] Installing CDC scripts"
 install -m 0755 bin/cdc-base /usr/local/sbin/cdc-base
 install -m 0755 bin/cdc-inet /usr/local/sbin/cdc-inet
 
+echo "[*] Installing sniffer daemon"
+install -m 0755 bin/chip-sniffer-daemon /usr/local/sbin/chip-sniffer-daemon
+
+echo "[*] Installing systemd units"
+install -m 0644 systemd/cdc-base.service /etc/systemd/system/
+install -m 0644 systemd/chip-webui.service /etc/systemd/system/
+install -m 0644 systemd/chip-sniffer.service /etc/systemd/system/
+
 echo "[*] Installing systemd units"
 install -m 0644 systemd/cdc-base.service /etc/systemd/system/
 install -m 0644 systemd/chip-webui.service /etc/systemd/system/

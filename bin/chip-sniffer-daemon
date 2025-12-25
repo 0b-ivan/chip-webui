@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+
+IFACE="${1:-usb0}"
+OUTDIR="/home/chip/chip-webui/web/captures"
+
+mkdir -p "$OUTDIR"
+chmod 0755 "$OUTDIR"
+
+TS="$(date +%Y%m%d-%H%M%S)"
+BASE="$OUTDIR/${IFACE}-${TS}.pcap"
+
+# Rotation: max 5MB pro File, 6 Files => max ~30MB
+# -s 0: volle Paketgröße
+# -n: kein DNS-Lookup (schneller)
+exec /usr/sbin/tcpdump -i "$IFACE" -n -s 0 \
+  -C 5 -W 6 \
+  -w "$BASE"
