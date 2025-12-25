@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+echo "Shutting down PocketCHIP now..."
+/sbin/poweroff -f
