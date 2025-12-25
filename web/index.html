@@ -194,17 +194,41 @@
 
     $('wifiOut').textContent = txt;
   }
+  function renderSnifferLinks(text){
+    // erwartet Block:
+    // files:
+    // file1
+    // file2
+    const lines = text.split('\n');
+    const i = lines.findIndex(l => l.trim() === 'files:');
+    if(i === -1) return '';
+
+    const files = [];
+    for(let k=i+1; k<lines.length; k++){
+      const s = lines[k].trim();
+      if(!s) continue;
+      if(s.endsWith(':')) break; // nächster Abschnitt (download_hint:, etc.)
+      files.push(s);
+    }
+
+    if(files.length === 0) return '\n\n(no files)';
+
+    const links = files.map(f => `- http://192.168.7.1/captures/${encodeURIComponent(f)}`).join('\n');
+    return '\n\nDownload links:\n' + links;
+  }
+
   async function sniffer(action){
     const out = document.getElementById('snifferOut');
     out.textContent = 'Läuft…';
     try {
       const r = await fetch('/cgi-bin/sniffer.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
       const t = await r.text();
-      out.textContent = t;
+      out.textContent = t + renderSnifferLinks(t);
     } catch (e) {
       out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
     }
   }
+
 
   // Initialer Auto-Status (optional)
   document.addEventListener('DOMContentLoaded', () => {
