@@ -2,4 +2,5 @@
 *.swp
 *.tmp
 .env
+.idea
 node_modules/
