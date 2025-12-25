@@ -1,0 +1,56 @@
+#!/bin/sh
+set -eu
+
+USB_IF="usb0"
+USB_ADDR="192.168.7.1/24"
+DNSMASQ_CONF="/etc/dnsmasq.d/usb0.conf"
+
+ensure_ip() {
+  ip link set "$USB_IF" up 2>/dev/null || true
+  # IP nur setzen, wenn fehlt
+  if ! ip -4 addr show dev "$USB_IF" | grep -q "192\.168\.7\.1/24"; then
+    # kein flush nötig; add schlägt fehl, wenn schon da
+    ip addr add "$USB_ADDR" dev "$USB_IF" 2>/dev/null || true
+  fi
+}
+
+ensure_dnsmasq_conf() {
+  # Minimaler DHCP nur für usb0
+  cat > "$DNSMASQ_CONF" <<CONF
+interface=$USB_IF
+bind-interfaces
+dhcp-range=192.168.7.2,192.168.7.50,255.255.255.0,12h
+dhcp-option=3,192.168.7.1
+dhcp-option=6,1.1.1.1,8.8.8.8
+CONF
+}
+
+restart_dnsmasq() {
+  # Buster: systemweiten dnsmasq Dienst nutzen
+  systemctl restart dnsmasq 2>/dev/null || systemctl start dnsmasq 2>/dev/null || true
+}
+
+status() {
+  echo "usb_if=$USB_IF"
+  ip -br link show "$USB_IF" 2>/dev/null || true
+  ip -br addr show "$USB_IF" 2>/dev/null || true
+  if [ -f "$DNSMASQ_CONF" ]; then
+    echo "dnsmasq_conf=$DNSMASQ_CONF (present)"
+  else
+    echo "dnsmasq_conf=$DNSMASQ_CONF (missing)"
+  fi
+  pgrep -a dnsmasq 2>/dev/null || echo "dnsmasq=not-running"
+}
+
+up() {
+  ensure_ip
+  ensure_dnsmasq_conf
+  restart_dnsmasq
+  echo "OK: CDC base enabled (usb0=$USB_ADDR + DHCP)"
+}
+
+case "${1:-status}" in
+  status) status ;;
+  up) up ;;
+  *) echo "usage: $0 {status|up}" >&2; exit 2 ;;
+esac
