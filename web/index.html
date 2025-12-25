@@ -1,48 +1,359 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PocketCHIP – CDC WebUI</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PocketCHIP – WebUI</title>
   <style>
-    body { font-family: sans-serif; margin: 16px; }
-    .box { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    button { padding: 10px 12px; margin-right: 8px; }
-    pre { background: #f6f6f6; padding: 10px; border-radius: 6px; overflow: auto; }
-    small { color: #555; }
+    :root{
+      --bg:#0b0f14;
+      --card:#111824;
+      --card2:#0f1620;
+      --text:#e7eef9;
+      --muted:#a9b6c7;
+      --line:#223043;
+      --btn:#1b2a3d;
+      --btn2:#20344a;
+      --ok:#2ecc71;
+      --warn:#f1c40f;
+      --err:#e74c3c;
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 30% -10%, #172235 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 14px;
+    }
+
+    header{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      padding: 10px 6px 16px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width: 0;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: .2px;
+      line-height: 1.1;
+    }
+    .brand p{
+      margin:0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height:1.2;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border:1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .dot{
+      width:9px;height:9px;border-radius:50%;
+      background: var(--warn);
+      box-shadow: 0 0 0 3px rgba(241,196,15,.12);
+    }
+    .dot.ok{ background: var(--ok); box-shadow: 0 0 0 3px rgba(46,204,113,.12); }
+    .dot.err{ background: var(--err); box-shadow: 0 0 0 3px rgba(231,76,60,.12); }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 720px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .card .hd{
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.12);
+    }
+    .card .hd h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing: .2px;
+    }
+    .card .hd p{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .card .bd{ padding: 12px; }
+
+    .btnrow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 480px){
+      .btnrow{ grid-template-columns: repeat(3, 1fr); }
+    }
+
+    button{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.09);
+      background: linear-gradient(180deg, var(--btn2), var(--btn));
+      color: var(--text);
+      border-radius: 12px;
+      padding: 12px 12px;
+      font-weight: 650;
+      font-size: 14px;
+      cursor:pointer;
+      transition: transform .05s ease, border-color .15s ease, filter .15s ease;
+    }
+    button:active{ transform: translateY(1px); }
+    button:hover{ border-color: rgba(255,255,255,.18); filter: brightness(1.05); }
+    button.secondary{
+      background: transparent;
+      border-color: rgba(255,255,255,.12);
+    }
+    button.danger{
+      background: linear-gradient(180deg, rgba(231,76,60,.25), rgba(231,76,60,.18));
+      border-color: rgba(231,76,60,.35);
+    }
+
+    .out{
+      margin-top: 12px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 10px;
+      min-height: 120px;
+      overflow:auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #d6e2f2;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .hint{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .footer{
+      margin: 12px 4px 4px;
+      color: var(--muted);
+      font-size: 12px;
+      opacity: .9;
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      gap: 8px;
+      align-items:center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .kv code{ color: var(--text); }
   </style>
 </head>
+
 <body>
-  <h1>PocketCHIP – CDC WebUI</h1>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>PocketCHIP – WebUI</h1>
+        <p>Minimal, offline, ressourcenschonend (usb0 only)</p>
+      </div>
 
-  <div class="box">
-    <h2>CDC Base</h2>
-    <p><b>Immer aktiv</b>, sobald USB angeschlossen ist (usb0=192.168.7.1/24 + DHCP).</p>
+      <div class="pill" title="Frontend-Status (nur UI)">
+        <span id="uiDot" class="dot"></span>
+        <span id="uiState">Bereit</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="hd">
+          <h2>CDC Base</h2>
+          <p>Immer aktiv, sobald USB angeschlossen ist (usb0=192.168.7.1/24 + DHCP).</p>
+        </div>
+        <div class="bd">
+          <div class="kv">
+            <div>Adresse</div><div><code>192.168.7.1</code></div>
+            <div>Port</div><div><code>80</code></div>
+          </div>
+          <div class="hint">Hinweis: CDC Base wird nicht per UI ausgeschaltet.</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="hd">
+          <h2>CDC Internet Sharing</h2>
+          <p>Hier schaltest du nur Routing/NAT (usb0 → uplink) ein/aus.</p>
+        </div>
+        <div class="bd">
+          <div class="btnrow">
+            <button class="secondary" onclick="run('status')">Status</button>
+            <button onclick="run('on')">Internet an</button>
+            <button class="danger" onclick="run('off')">Internet aus</button>
+          </div>
+
+	  <div class="card">
+  <h2>WLAN</h2>
+  <p>Scan / Toggle / Verbinden (NetworkManager via nmcli)</p>
+
+  <div class="row">
+    <button onclick="wifiStatus()">Status</button>
+    <button class="secondary" onclick="wifiScan()">Scan</button>
+    <button class="secondary" onclick="wifiOn()">WLAN an</button>
+    <button class="secondary" onclick="wifiOff()">WLAN aus</button>
   </div>
 
-  <div class="box">
-    <h2>CDC Internet Sharing</h2>
-    <p>Hier schaltest du nur das Internet-Routing/NAT (usb0 → uplink) ein/aus.</p>
-    <p>
-      <button onclick="run('status')">Status</button>
-      <button onclick="run('on')">Internet an</button>
-      <button onclick="run('off')">Internet aus</button>
-    </p>
-    <pre id="out">Bereit.</pre>
-    <small>Minimal gehalten (busybox httpd + CGI).</small>
+  <div class="row" style="margin-top:12px;">
+    <input id="ssid" placeholder="SSID" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+    <input id="pass" placeholder="Passwort (leer = offen)" type="password" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+    <button class="secondary" onclick="wifiConnect()">Verbinden</button>
   </div>
 
-<script>
-async function run(action){
-  const out = document.getElementById('out');
-  out.textContent = 'Läuft…';
-  try {
-    const r = await fetch('/cgi-bin/cdc.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
-    out.textContent = await r.text();
-  } catch (e) {
-    out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
-  }
+  <pre id="wifiOut">Bereit.</pre>
+  <small class="hint">Hinweis: Passwort wird per POST gesendet (nicht in URL), aber trotzdem: nur über usb0 erreichbar.</small>
+</div>
+
+          <div id="out" class="out">Bereit.</div>
+          <div class="hint">Tipp: Auf Mobile sind die Buttons bewusst groß für Touch.</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      Minimal gehalten (busybox httpd + CGI). Keine externen Assets.
+    </div>
+  </div>
+
+  <script>
+    function setUi(state){
+      const dot = document.getElementById('uiDot');
+      const txt = document.getElementById('uiState');
+      txt.textContent = state;
+
+      dot.classList.remove('ok','err');
+      if(state === 'OK') dot.classList.add('ok');
+      else if(state === 'FEHLER') dot.classList.add('err');
+    }
+
+    async function run(action){
+      const out = document.getElementById('out');
+      setUi('Läuft…');
+      out.textContent = 'Läuft…\n';
+
+      try{
+        const r = await fetch('/cgi-bin/cdc.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+        const t = await r.text();
+        out.textContent = t || '(leer)';
+        setUi((r.ok && !/^ERROR:/m.test(t)) ? 'OK' : 'FEHLER');
+      }catch(e){
+        out.textContent = 'FEHLER: ' + (e && e.message ? e.message : e);
+        setUi('FEHLER');
+      }
+    }
+
+    // initialer Auto-Status (optional, kostet kaum was)
+    run('status');
+async function api(path, opts){
+  const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
+  return await r.text();
 }
-</script>
+
+function $(id){ return document.getElementById(id); }
+
+async function wifiStatus(){
+  $("wifiOut").textContent = "Läuft…";
+  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=status");
+}
+
+async function wifiScan(){
+  $("wifiOut").textContent = "Scanne…";
+  const txt = await api("/cgi-bin/wifi.cgi?action=scan");
+  // Optional: hübscher anzeigen (minimal)
+  const lines = txt.trim().split("\n").filter(Boolean);
+  const pretty = lines.map(l => {
+    // IN-USE:*,SSID,SECURITY,SIGNAL
+    const parts = l.split(":");
+    if(parts.length < 4) return l;
+    const inuse = parts[0] === "*" ? "[*]" : "[ ]";
+    const ssid = parts[1] || "<hidden>";
+    const sec = parts[2] || "--";
+    const sig = parts[3] || "";
+    return `${inuse} ${ssid}  (${sec})  ${sig}%`;
+  }).join("\n");
+  $("wifiOut").textContent = pretty || txt;
+}
+
+async function wifiOn(){
+  $("wifiOut").textContent = "Schalte WLAN an…";
+  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=on");
+}
+
+async function wifiOff(){
+  $("wifiOut").textContent = "Schalte WLAN aus…";
+  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=off");
+}
+
+async function wifiConnect(){
+  const ssid = $("ssid").value.trim();
+  const pass = $("pass").value;
+  if(!ssid){
+    $("wifiOut").textContent = "ERROR: SSID fehlt";
+    return;
+  }
+  $("wifiOut").textContent = "Verbinde…";
+
+  const body = new URLSearchParams({ ssid, pass }).toString();
+  const txt = await api("/cgi-bin/wifi.cgi?action=connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body
+  });
+  $("wifiOut").textContent = txt;
+}
+
+  </script>
 </body>
 </html>
