@@ -91,9 +91,11 @@
         <button onclick="sniffer('status')">Status</button>
         <button onclick="sniffer('start')">Start</button>
         <button class="secondary" onclick="sniffer('stop')">Stop</button>
+        <button class="secondary" onclick="openSnifferLive()">Live</button>
       </div>
 
       <pre id="snifferOut">Bereit.</pre>
+      <div id="snifferLinks" class="linklist"></div>
       <small>Downloads unter <code>/captures/</code> (z. B. <code>http://192.168.7.1/captures/...</code>).</small>
     </div>
 
@@ -105,6 +107,48 @@
 </div>
 
 <script>
+
+  function openSnifferLive(){
+    // separates Fenster
+    const w = window.open('', 'snifferLive', 'width=900,height=600');
+    w.document.write(`
+    <title>Sniffer Live</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body{font-family:sans-serif;margin:12px}
+      pre{background:#111;color:#eee;padding:12px;border-radius:8px;white-space:pre-wrap}
+      .row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+      button{padding:10px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}
+    </style>
+    <div class="row">
+      <button id="btnStop">Stop</button>
+      <div id="st">Verbinde…</div>
+    </div>
+    <pre id="log"></pre>
+  `);
+
+    const log = w.document.getElementById('log');
+    const st  = w.document.getElementById('st');
+    const es  = new w.EventSource('/cgi-bin/sniffer-live.cgi');
+
+    es.onmessage = (ev) => {
+      log.textContent = ev.data + "\n" + log.textContent;
+      st.textContent = 'Live…';
+    };
+    es.addEventListener('end', () => {
+      st.textContent = 'Beendet';
+      es.close();
+    });
+    es.onerror = () => {
+      st.textContent = 'Verbindung beendet/Fehler (neu öffnen zum reconnect)';
+      es.close();
+    };
+
+    w.document.getElementById('btnStop').onclick = () => {
+      st.textContent = 'Gestoppt';
+      es.close();
+    };
+  }
   function $(id){ return document.getElementById(id); }
 
   function setUi(state){
