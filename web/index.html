@@ -3,170 +3,185 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
   <title>PocketCHIP – WebUI</title>
 </head>
 
 <body>
-  <div class="wrap">
-    <header>
-      <div class="brand">
-        <h1>PocketCHIP – WebUI</h1>
-        <p>Minimal, offline, ressourcenschonend (usb0 only)</p>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>PocketCHIP – WebUI</h1>
+      <p>Minimal, offline, ressourcenschonend (usb0 only)</p>
+    </div>
+
+    <div class="pill" title="Frontend-Status (nur UI)">
+      <span id="uiDot" class="dot"></span>
+      <span id="uiState">Bereit</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Card 1 -->
+    <section class="card">
+      <div class="hd">
+        <h2>CDC Base</h2>
+        <p>Immer aktiv, sobald USB angeschlossen ist (usb0=192.168.7.1/24 + DHCP).</p>
+      </div>
+      <div class="bd">
+        <div class="kv">
+          <div>Adresse</div><div><code>192.168.7.1</code></div>
+          <div>Port</div><div><code>80</code></div>
+        </div>
+        <div class="hint">Hinweis: CDC Base wird nicht per UI ausgeschaltet.</div>
+      </div>
+    </section>
+
+    <!-- Card 2 -->
+    <section class="card">
+      <div class="hd">
+        <h2>CDC Internet Sharing</h2>
+        <p>Hier schaltest du nur Routing/NAT (usb0 → uplink) ein/aus.</p>
+      </div>
+      <div class="bd">
+        <div class="btnrow">
+          <button type="button" class="secondary" onclick="run('status')">Status</button>
+          <button type="button" onclick="run('on')">Internet an</button>
+          <button type="button" class="danger" onclick="run('off')">Internet aus</button>
+        </div>
+
+        <div id="out" class="out">Bereit.</div>
+        <div class="hint">Tipp: Auf Mobile sind die Buttons bewusst groß für Touch.</div>
+      </div>
+    </section>
+
+    <!-- Card 3 -->
+    <section class="card">
+      <div class="hd">
+        <h2>WLAN</h2>
+        <p>Scan / Toggle / Verbinden (NetworkManager via nmcli)</p>
       </div>
 
-      <div class="pill" title="Frontend-Status (nur UI)">
-        <span id="uiDot" class="dot"></span>
-        <span id="uiState">Bereit</span>
+      <div class="bd">
+        <div class="row">
+          <button type="button" onclick="wifiStatus()">Status</button>
+          <button type="button" class="secondary" onclick="wifiScan()">Scan</button>
+          <button type="button" class="secondary" onclick="wifiOn()">WLAN an</button>
+          <button type="button" class="secondary" onclick="wifiOff()">WLAN aus</button>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <input id="ssid" placeholder="SSID" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+          <input id="pass" placeholder="Passwort (leer = offen)" type="password" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+          <button type="button" class="secondary" onclick="wifiConnect()">Verbinden</button>
+        </div>
+
+        <pre id="wifiOut">Bereit.</pre>
+        <small class="hint">Hinweis: Passwort wird per POST gesendet (nicht in URL), aber trotzdem: nur über usb0 erreichbar.</small>
       </div>
-    </header>
-
-    <div class="grid">
-      <section class="card">
-        <div class="hd">
-          <h2>CDC Base</h2>
-          <p>Immer aktiv, sobald USB angeschlossen ist (usb0=192.168.7.1/24 + DHCP).</p>
-        </div>
-        <div class="bd">
-          <div class="kv">
-            <div>Adresse</div><div><code>192.168.7.1</code></div>
-            <div>Port</div><div><code>80</code></div>
-          </div>
-          <div class="hint">Hinweis: CDC Base wird nicht per UI ausgeschaltet.</div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="hd">
-          <h2>CDC Internet Sharing</h2>
-          <p>Hier schaltest du nur Routing/NAT (usb0 → uplink) ein/aus.</p>
-        </div>
-        <div class="bd">
-          <div class="btnrow">
-            <button class="secondary" onclick="run('status')">Status</button>
-            <button onclick="run('on')">Internet an</button>
-            <button class="danger" onclick="run('off')">Internet aus</button>
-          </div>
-
-	  <div class="card">
-  <h2>WLAN</h2>
-  <p>Scan / Toggle / Verbinden (NetworkManager via nmcli)</p>
-
-  <div class="row">
-    <button onclick="wifiStatus()">Status</button>
-    <button class="secondary" onclick="wifiScan()">Scan</button>
-    <button class="secondary" onclick="wifiOn()">WLAN an</button>
-    <button class="secondary" onclick="wifiOff()">WLAN aus</button>
+    </section>
   </div>
 
-  <div class="row" style="margin-top:12px;">
-    <input id="ssid" placeholder="SSID" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
-    <input id="pass" placeholder="Passwort (leer = offen)" type="password" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
-    <button class="secondary" onclick="wifiConnect()">Verbinden</button>
+  <div class="footer">
+    Minimal gehalten (busybox httpd + CGI). Keine externen Assets.
   </div>
-
-  <pre id="wifiOut">Bereit.</pre>
-  <small class="hint">Hinweis: Passwort wird per POST gesendet (nicht in URL), aber trotzdem: nur über usb0 erreichbar.</small>
 </div>
 
-          <div id="out" class="out">Bereit.</div>
-          <div class="hint">Tipp: Auf Mobile sind die Buttons bewusst groß für Touch.</div>
-        </div>
-      </section>
-    </div>
+<script>
+  function $(id){ return document.getElementById(id); }
 
-    <div class="footer">
-      Minimal gehalten (busybox httpd + CGI). Keine externen Assets.
-    </div>
-  </div>
+  function setUi(state){
+    const dot = $('uiDot');
+    const txt = $('uiState');
+    if (!dot || !txt) return;
 
-  <script>
-    function setUi(state){
-      const dot = document.getElementById('uiDot');
-      const txt = document.getElementById('uiState');
-      txt.textContent = state;
+    txt.textContent = state;
 
-      dot.classList.remove('ok','err');
-      if(state === 'OK') dot.classList.add('ok');
-      else if(state === 'FEHLER') dot.classList.add('err');
-    }
-
-    async function run(action){
-      const out = document.getElementById('out');
-      setUi('Läuft…');
-      out.textContent = 'Läuft…\n';
-
-      try{
-        const r = await fetch('/cgi-bin/cdc.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
-        const t = await r.text();
-        out.textContent = t || '(leer)';
-        setUi((r.ok && !/^ERROR:/m.test(t)) ? 'OK' : 'FEHLER');
-      }catch(e){
-        out.textContent = 'FEHLER: ' + (e && e.message ? e.message : e);
-        setUi('FEHLER');
-      }
-    }
-
-    // initialer Auto-Status (optional, kostet kaum was)
-    run('status');
-async function api(path, opts){
-  const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
-  return await r.text();
-}
-
-function $(id){ return document.getElementById(id); }
-
-async function wifiStatus(){
-  $("wifiOut").textContent = "Läuft…";
-  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=status");
-}
-
-async function wifiScan(){
-  $("wifiOut").textContent = "Scanne…";
-  const txt = await api("/cgi-bin/wifi.cgi?action=scan");
-  // Optional: hübscher anzeigen (minimal)
-  const lines = txt.trim().split("\n").filter(Boolean);
-  const pretty = lines.map(l => {
-    // IN-USE:*,SSID,SECURITY,SIGNAL
-    const parts = l.split(":");
-    if(parts.length < 4) return l;
-    const inuse = parts[0] === "*" ? "[*]" : "[ ]";
-    const ssid = parts[1] || "<hidden>";
-    const sec = parts[2] || "--";
-    const sig = parts[3] || "";
-    return `${inuse} ${ssid}  (${sec})  ${sig}%`;
-  }).join("\n");
-  $("wifiOut").textContent = pretty || txt;
-}
-
-async function wifiOn(){
-  $("wifiOut").textContent = "Schalte WLAN an…";
-  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=on");
-}
-
-async function wifiOff(){
-  $("wifiOut").textContent = "Schalte WLAN aus…";
-  $("wifiOut").textContent = await api("/cgi-bin/wifi.cgi?action=off");
-}
-
-async function wifiConnect(){
-  const ssid = $("ssid").value.trim();
-  const pass = $("pass").value;
-  if(!ssid){
-    $("wifiOut").textContent = "ERROR: SSID fehlt";
-    return;
+    dot.classList.remove('ok','err');
+    if(state === 'OK') dot.classList.add('ok');
+    else if(state === 'FEHLER') dot.classList.add('err');
   }
-  $("wifiOut").textContent = "Verbinde…";
 
-  const body = new URLSearchParams({ ssid, pass }).toString();
-  const txt = await api("/cgi-bin/wifi.cgi?action=connect", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
+  async function run(action){
+    const out = $('out');
+    setUi('Läuft…');
+    if (out) out.textContent = 'Läuft…\n';
+
+    try{
+      const r = await fetch('/cgi-bin/cdc.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+      const t = await r.text();
+      if (out) out.textContent = t || '(leer)';
+      setUi((r.ok && !/^ERROR:/m.test(t)) ? 'OK' : 'FEHLER');
+    }catch(e){
+      if (out) out.textContent = 'FEHLER: ' + (e && e.message ? e.message : e);
+      setUi('FEHLER');
+    }
+  }
+
+  async function api(path, opts){
+    const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
+    return await r.text();
+  }
+
+  async function wifiStatus(){
+    $('wifiOut').textContent = 'Läuft…';
+    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=status');
+  }
+
+  async function wifiScan(){
+    $('wifiOut').textContent = 'Scanne…';
+    const txt = await api('/cgi-bin/wifi.cgi?action=scan');
+
+    // Erwartet Zeilen im Format: "*:SSID:SECURITY:SIGNAL" oder ":SSID:SECURITY:SIGNAL"
+    const lines = txt.trim().split('\n').filter(Boolean);
+    const pretty = lines.map(l => {
+      const parts = l.split(':');
+      if(parts.length < 4) return l;
+      const inuse = parts[0] === '*' ? '[*]' : '[ ]';
+      const ssid = parts[1] || '<hidden>';
+      const sec  = parts[2] || '--';
+      const sig  = parts[3] || '';
+      return `${inuse} ${ssid}  (${sec})  ${sig}%`;
+    }).join('\n');
+
+    $('wifiOut').textContent = pretty || txt;
+  }
+
+  async function wifiOn(){
+    $('wifiOut').textContent = 'Schalte WLAN an…';
+    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=on');
+  }
+
+  async function wifiOff(){
+    $('wifiOut').textContent = 'Schalte WLAN aus…';
+    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=off');
+  }
+
+  async function wifiConnect(){
+    const ssid = $('ssid').value.trim();
+    const pass = $('pass').value;
+
+    if(!ssid){
+      $('wifiOut').textContent = 'ERROR: SSID fehlt';
+      return;
+    }
+
+    $('wifiOut').textContent = 'Verbinde…';
+
+    const body = new URLSearchParams({ ssid, pass }).toString();
+    const txt = await api('/cgi-bin/wifi.cgi?action=connect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+
+    $('wifiOut').textContent = txt;
+  }
+
+  // Initialer Auto-Status (optional)
+  document.addEventListener('DOMContentLoaded', () => {
+    run('status');
   });
-  $("wifiOut").textContent = txt;
-}
-
-  </script>
+</script>
 </body>
 </html>
