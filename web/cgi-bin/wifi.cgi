@@ -4,86 +4,32 @@ set -eu
 echo "Content-Type: text/plain; charset=utf-8"
 echo ""
 
-# --- helpers -----------------------------------------------------
+QS="${QUERY_STRING:-}"
 
+# action=... aus QueryString ziehen (minimal)
+ACTION="$(printf '%s' "$QS" | sed -n 's/.*action=\([^&]*\).*/\1/p')"
+SSID="$(printf '%s' "$QS" | sed -n 's/.*ssid=\([^&]*\).*/\1/p')"
+PSK="$(printf '%s' "$QS"  | sed -n 's/.*psk=\([^&]*\).*/\1/p')"
+
+# rudimentäres URL-decoding für %20 usw. (reicht pragmatisch)
 urldecode() {
-  # minimal URL decode for x-www-form-urlencoded
-  # "+" -> space, %XX -> byte
-  printf '%s' "$1" | sed 's/+/ /g; s/%/\\x/g' | xargs -0 printf '%b' 2>/dev/null || true
+  # busybox ash: printf %b trick
+  printf '%b' "$(printf '%s' "$1" | sed 's/+/ /g; s/%/\\x/g')"
 }
 
-get_qs_param() {
-  # $1 = key
-  echo "${QUERY_STRING:-}" | tr '&' '\n' | sed -n "s/^$1=//p" | head -n1
-}
+ACTION="$(urldecode "${ACTION:-}")"
+SSID="$(urldecode "${SSID:-}")"
+PSK="$(urldecode "${PSK:-}")"
 
-read_post_body() {
-  # reads x-www-form-urlencoded body to stdout
-  len="${CONTENT_LENGTH:-0}"
-  [ "$len" -gt 0 ] || { echo ""; return 0; }
-  dd bs=1 count="$len" 2>/dev/null
-}
-
-get_post_param() {
-  # $1 = key
-  body="$(read_post_body)"
-  echo "$body" | tr '&' '\n' | sed -n "s/^$1=//p" | head -n1
-}
-
-wifi_status() {
-  # nmcli status summary
-  sudo -n /usr/bin/nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device 2>/dev/null || true
-  echo "---"
-  sudo -n /usr/bin/nmcli -t -f GENERAL.STATE,GENERAL.CONNECTION dev show wlan0 2>/dev/null || true
-}
-
-wifi_scan() {
-  # list networks (compact)
-  sudo -n /usr/bin/nmcli -t -f IN-USE,SSID,SECURITY,SIGNAL device wifi list 2>/dev/null || true
-}
-
-wifi_on()  { sudo -n /usr/bin/nmcli radio wifi on  2>&1 || true; echo "OK: wifi on"; }
-wifi_off() { sudo -n /usr/bin/nmcli radio wifi off 2>&1 || true; echo "OK: wifi off"; }
-
-wifi_connect() {
-  ssid_enc="$(get_post_param ssid)"
-  pass_enc="$(get_post_param pass)"
-
-  ssid="$(urldecode "${ssid_enc:-}")"
-  pass="$(urldecode "${pass_enc:-}")"
-
-  if [ -z "$ssid" ]; then
-    echo "ERROR: missing ssid"
-    exit 0
-  fi
-
-  # Important: do NOT echo password
-  if [ -n "$pass" ]; then
-    sudo -n /usr/bin/nmcli dev wifi connect "$ssid" password "$pass" 2>&1 || {
-      echo "ERROR: connect failed"
-      exit 0
-    }
-  else
-    # open network attempt
-    sudo -n /usr/bin/nmcli dev wifi connect "$ssid" 2>&1 || {
-      echo "ERROR: connect failed (maybe needs password)"
-      exit 0
-    }
-  fi
-
-  echo "OK: connected to $ssid"
-}
-
-# --- router ------------------------------------------------------
-
-action="$(get_qs_param action)"
-action="$(urldecode "${action:-status}")"
-
-case "$action" in
-  status)  wifi_status ;;
-  scan)    wifi_scan ;;
-  on)      wifi_on ;;
-  off)     wifi_off ;;
-  connect) wifi_connect ;;
-  *) echo "ERROR: action must be status|scan|on|off|connect" ;;
+case "$ACTION" in
+  status|scan|on|off|connect) ;;
+  *) echo "ERROR: action must be status|scan|on|off|connect"; exit 0 ;;
 esac
+
+# connect benötigt ssid, psk optional (offenes wlan)
+if [ "$ACTION" = "connect" ]; then
+  sudo -n /usr/local/sbin/wifi-webui connect "$SSID" "$PSK" 2>&1 || { echo "ERROR: sudo/wifi-webui failed"; }
+  exit 0
+fi
+
+sudo -n /usr/local/sbin/wifi-webui "$ACTION" 2>&1 || { echo "ERROR: sudo/wifi-webui failed"; }
