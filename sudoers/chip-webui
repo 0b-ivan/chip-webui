@@ -4,6 +4,7 @@
 chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet status
 chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet on
 chip ALL=(root) NOPASSWD: /usr/local/sbin/cdc-inet off
+chip ALL=(root) NOPASSWD: /usr/local/sbin/nextdns-webui *
 
 # WLAN (scan/status/connect) - wird später von wifi.cgi genutzt
 chip ALL=(root) NOPASSWD: /usr/bin/nmcli radio wifi on

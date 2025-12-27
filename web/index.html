@@ -99,6 +99,26 @@
       <small>Downloads unter <code>/captures/</code> (z. B. <code>http://192.168.7.1/captures/...</code>).</small>
     </div>
 
+<!-- Card: NextDNS -->
+<section class="card">
+  <div class="hd">
+    <h2>NextDNS</h2>
+    <p>DNS-Filter (ein/aus) + lokale Logs.</p>
+  </div>
+
+  <div class="bd">
+    <div class="row">
+      <button type="button" onclick="nextdns('status')">Status</button>
+      <button type="button" onclick="nextdns('on')">Ein</button>
+      <button type="button" class="danger" onclick="nextdns('off')">Aus</button>
+      <button type="button" class="secondary" onclick="nextdns('logs')">Logs</button>
+    </div>
+
+    <pre id="nextdnsOut">Bereit.</pre>
+    <small class="hint">Hinweis: Logs kommen aus <code>journalctl -u nextdns</code>.</small>
+  </div>
+</section>
+
   </div>
 
   <div class="footer">
@@ -107,6 +127,17 @@
 </div>
 
 <script>
+
+async function nextdns(action){
+  const out = document.getElementById('nextdnsOut');
+  out.textContent = 'Läuft…';
+  try{
+    const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+    out.textContent = await r.text();
+  }catch(e){
+    out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+  }
+}
 
   function openSnifferLive(){
     // separates Fenster
@@ -272,6 +303,26 @@
       out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
     }
   }
+  async function nextdns(action){
+  const out = document.getElementById('nextdnsOut');
+  out.textContent = 'Läuft…';
+  const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache:'no-store' });
+  out.textContent = await r.text();
+}
+
+async function nextdnsSetConfig(){
+  const out = document.getElementById('nextdnsOut');
+  const id = document.getElementById('nextdnsId').value.trim();
+  if(!id){ out.textContent = 'ERROR: config id fehlt'; return; }
+  out.textContent = 'Setze…';
+  const body = new URLSearchParams({ config_id:id }).toString();
+  const r = await fetch('/cgi-bin/nextdns.cgi?action=setconfig', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
+    body
+  });
+  out.textContent = await r.text();
+}
 
 
   // Initialer Auto-Status (optional)

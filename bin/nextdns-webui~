@@ -1,0 +1,38 @@
+#!/bin/sh
+set -eu
+
+CONF="/etc/nextdns.conf"
+
+case "${1:-status}" in
+  status)
+    systemctl is-active nextdns >/dev/null 2>&1 && echo "running=1" || echo "running=0"
+    nextdns status 2>/dev/null || true
+    ;;
+  on)
+    systemctl enable --now nextdns
+    echo "OK: NextDNS enabled"
+    ;;
+  off)
+    systemctl disable --now nextdns || true
+    echo "OK: NextDNS disabled"
+    ;;
+  setconfig)
+    ID="${2:-}"
+    [ -n "$ID" ] || { echo "ERROR: missing config id"; exit 0; }
+    # Minimal robust: ersetze/lege config-Zeile an
+    if [ -f "$CONF" ]; then
+      grep -q '^config ' "$CONF" && sed -i "s/^config .*/config $ID/" "$CONF" || printf '\nconfig %s\n' "$ID" >>"$CONF"
+    else
+      printf 'config %s\n' "$ID" >"$CONF"
+    fi
+    systemctl restart nextdns || true
+    echo "OK: config set"
+    ;;
+  logs)
+    journalctl -u nextdns --no-pager -n 200 2>/dev/null || true
+    ;;
+  *)
+    echo "usage: $0 {status|on|off|setconfig <id>|logs}" >&2
+    exit 2
+    ;;
+esac

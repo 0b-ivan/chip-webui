@@ -1,0 +1,41 @@
+#!/bin/sh
+set -eu
+
+SVC="nextdns.service"
+
+is_running() {
+  systemctl is-active --quiet "$SVC"
+}
+
+status() {
+  if is_running; then
+    echo "running=1"
+  else
+    echo "running=0"
+  fi
+  systemctl --no-pager -l status "$SVC" 2>/dev/null | sed -n '1,12p' || true
+}
+
+on() {
+  systemctl start "$SVC"
+  echo "OK: NextDNS started"
+}
+
+off() {
+  systemctl stop "$SVC"
+  echo "OK: NextDNS stopped"
+}
+
+logs() {
+  echo "running=$(is_running && echo 1 || echo 0)"
+  echo ""
+  journalctl -u "$SVC" --no-pager -n 120 2>/dev/null || true
+}
+
+case "${1:-status}" in
+  status) status ;;
+  on) on ;;
+  off) off ;;
+  logs) logs ;;
+  *) echo "usage: $0 {status|on|off|logs}" >&2; exit 2 ;;
+esac
