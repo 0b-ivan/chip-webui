@@ -183,3 +183,8 @@ button.danger{
     margin-top: 10px;
 }
 .kv code{ color: var(--text); }
+
+.tbl { width:100%; border-collapse: collapse; }
+.tbl th, .tbl td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+.tbl th { white-space: nowrap; }
+.tbl td:nth-child(2), .tbl td:nth-child(3) { white-space: nowrap; }

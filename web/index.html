@@ -82,7 +82,7 @@
       </div>
     </section>
 
-    <!-- Card 4 -->
+    <!-- Card 4: Sniffer (tcpdump) -->
     <section class="card">
       <div class="hd">
         <h2>Sniffer (tcpdump)</h2>
@@ -94,41 +94,31 @@
           <button type="button" onclick="tcpdumpCtl('status')">Status</button>
           <button type="button" onclick="tcpdumpCtl('start')">Start</button>
           <button type="button" class="secondary" onclick="tcpdumpCtl('stop')">Stop</button>
-          <button type="button" class="secondary" onclick="capturesRefresh()">Captures</button>
-          <button type="button" class="secondary" onclick="capturesCleanup(7)">Cleanup (7 Tage)</button>
+          <button type="button" class="secondary" onclick="tcpdumpRefresh()">Captures</button>
+          <button type="button" class="secondary" onclick="tcpdumpCleanup(7)">Cleanup (7 Tage)</button>
           <button type="button" class="secondary" onclick="openSnifferLive()">Live</button>
         </div>
 
-        <pre id="snifferOut">Bereit.</pre>
-        <pre id="snifferOut">Bereit.</pre>
+        <pre id="tcpdumpOut">Bereit.</pre>
 
-  <div class="hint" style="margin-top:8px;">
-    Zeige neueste Captures:
-    <select id="capLimit" onchange="capturesRefresh()">
-      <option value="10">10</option>
-      <option value="30" selected>30</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
-  </div>
+        <div class="hint">Zeige neueste Captures: <span id="tcpdumpLimit">30</span></div>
+        <div style="overflow:auto;">
+          <table id="tcpdumpTable" class="tbl">
+            <thead>
+              <tr>
+                <th>Datei</th>
+                <th>Größe</th>
+                <th>Zeit</th>
+                <th>Download</th>
+              </tr>
+            </thead>
+            <tbody id="tcpdumpTbody">
+              <tr><td colspan="4">Keine Daten</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-  <div style="margin-top:10px; overflow:auto; max-height:260px; border:1px solid #ddd; border-radius:10px;">
-    <table style="width:100%; border-collapse:collapse;">
-      <thead>
-        <tr>
-          <th style="text-align:left; padding:8px; border-bottom:1px solid #ddd;">Datei</th>
-          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Größe</th>
-          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Zeit</th>
-          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Download</th>
-        </tr>
-      </thead>
-      <tbody id="capturesBody">
-        <tr><td colspan="4" style="padding:10px;">Keine Daten</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <small class="hint">Captures liegen unter <code>/captures/</code>.</small>
+        <small class="hint">Captures liegen unter <code>/captures/</code>.</small>
       </div>
     </section>
 
@@ -151,6 +141,7 @@
         <small class="hint">Hinweis: Logs kommen aus <code>journalctl -u nextdns</code>.</small>
       </div>
     </section>
+
   </div>
 
   <div class="footer">
@@ -167,13 +158,12 @@
     if (!dot || !txt) return;
 
     txt.textContent = state;
-
     dot.classList.remove('ok','err');
     if(state === 'OK') dot.classList.add('ok');
     else if(state === 'FEHLER') dot.classList.add('err');
   }
 
-  async function api(path, opts){
+  async function apiText(path, opts){
     const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
     return await r.text();
   }
@@ -197,14 +187,13 @@
   // WLAN
   async function wifiStatus(){
     $('wifiOut').textContent = 'Läuft…';
-    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=status');
+    $('wifiOut').textContent = await apiText('/cgi-bin/wifi.cgi?action=status');
   }
 
   async function wifiScan(){
     $('wifiOut').textContent = 'Scanne…';
-    const txt = await api('/cgi-bin/wifi.cgi?action=scan');
+    const txt = await apiText('/cgi-bin/wifi.cgi?action=scan');
 
-    // Erwartet Zeilen im Format: "*:SSID:SECURITY:SIGNAL" oder ":SSID:SECURITY:SIGNAL"
     const lines = txt.trim().split('\n').filter(Boolean);
     const pretty = lines.map(l => {
       const parts = l.split(':');
@@ -221,12 +210,12 @@
 
   async function wifiOn(){
     $('wifiOut').textContent = 'Schalte WLAN an…';
-    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=on');
+    $('wifiOut').textContent = await apiText('/cgi-bin/wifi.cgi?action=on');
   }
 
   async function wifiOff(){
     $('wifiOut').textContent = 'Schalte WLAN aus…';
-    $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=off');
+    $('wifiOut').textContent = await apiText('/cgi-bin/wifi.cgi?action=off');
   }
 
   async function wifiConnect(){
@@ -241,7 +230,7 @@
     $('wifiOut').textContent = 'Verbinde…';
 
     const body = new URLSearchParams({ ssid, pass }).toString();
-    const txt = await api('/cgi-bin/wifi.cgi?action=connect', {
+    const txt = await apiText('/cgi-bin/wifi.cgi?action=connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body
@@ -250,9 +239,9 @@
     $('wifiOut').textContent = txt;
   }
 
-  // NextDNS (nur einmal definiert, mit Fehlerbehandlung)
+  // NextDNS
   async function nextdns(action){
-    const out = document.getElementById('nextdnsOut');
+    const out = $('nextdnsOut');
     out.textContent = 'Läuft…';
     try{
       const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
@@ -304,18 +293,23 @@
     };
   }
 
-  // tcpdump Control (cgi-bin/tcpdump.cgi)
-  async function tcpdumpCtl(action){
-    const out = $('snifferOut');
+  // -------- tcpdump (cgi-bin/tcpdump.cgi) + Captures-Listing ohne captures.cgi --------
+  const TCPDUMP_IFACE_DEFAULT = 'wlan0';
+  const TCPDUMP_LIMIT_DEFAULT = 30;
+
+  async function tcpdumpCtl(action, iface){
+    iface = (iface || TCPDUMP_IFACE_DEFAULT).trim();
+    const out = $('tcpdumpOut');
     if (out) out.textContent = 'Läuft…';
 
     try{
-      const r = await fetch('/cgi-bin/tcpdump.cgi?action=' + encodeURIComponent(action) + '&iface=wlan0', { cache: 'no-store' });
+      const r = await fetch('/cgi-bin/tcpdump.cgi?action=' + encodeURIComponent(action) + '&iface=' + encodeURIComponent(iface), { cache:'no-store' });
       const j = await r.json();
-
       if (out) out.textContent = `${j.action} (${j.iface}): ${j.result}`;
-      if (action === 'start' || action === 'stop' || action === 'status') {
-        await capturesRefresh();
+
+      // Nach Aktionen Liste aktualisieren
+      if(action === 'start' || action === 'stop' || action === 'status'){
+        await tcpdumpRefresh();
       }
     }catch(e){
       if (out) out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
@@ -323,71 +317,186 @@
   }
 
   function fmtBytes(n){
-    if (!Number.isFinite(n)) return '-';
+    if (!Number.isFinite(n) || n < 0) return '-';
     const u = ['B','KB','MB','GB'];
     let i = 0;
     while(n >= 1024 && i < u.length-1){ n/=1024; i++; }
     return (i===0 ? n.toFixed(0) : n.toFixed(1)) + ' ' + u[i];
   }
 
-  function fmtTime(epoch){
-    if(!epoch) return '-';
-    return new Date(epoch*1000).toLocaleString();
+  function fmtTimeMs(ms){
+    if(!Number.isFinite(ms) || ms <= 0) return '-';
+    return new Date(ms).toLocaleString();
   }
 
-  async function capturesRefresh(){
-    const box = $('snifferLinks');
-    if (box) box.textContent = 'Lade Captures…';
+  function renderCapturesTable(items){
+    const tbody = $('tcpdumpTbody');
+    if(!tbody) return;
 
-    try{
-      const r = await fetch('/cgi-bin/captures.cgi?action=list&limit=30', { cache:'no-store' });
-      const j = await r.json();
-      if(!j.ok){
-        if (box) box.textContent = 'Fehler: ' + (j.error || 'unbekannt');
-        return;
-      }
+    tbody.innerHTML = '';
+    if(!items || items.length === 0){
+      tbody.innerHTML = '<tr><td colspan="4">Keine Daten</td></tr>';
+      return;
+    }
 
-      const caps = j.captures || [];
-      if(caps.length === 0){
-        if (box) box.textContent = '(keine Captures)';
-        return;
-      }
+    for(const it of items){
+      const tr = document.createElement('tr');
 
-      // Linkliste rendern
-      const lines = caps.map(c => {
-        const href = '/captures/' + encodeURIComponent(c.name);
-        return `- ${c.name}  (${fmtBytes(Number(c.size))}, ${fmtTime(Number(c.mtime))})\n  ${location.origin}${href}`;
-      }).join('\n');
+      const tdName = document.createElement('td');
+      tdName.textContent = it.name || '-';
 
-      if (box) box.textContent = lines;
-    }catch(e){
-      if (box) box.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+      const tdSize = document.createElement('td');
+      tdSize.textContent = it.sizeText || '-';
+
+      const tdTime = document.createElement('td');
+      tdTime.textContent = it.timeText || '-';
+
+      const tdDl = document.createElement('td');
+      const a = document.createElement('a');
+      a.href = it.href;
+      a.textContent = 'Download';
+      a.setAttribute('download', '');
+      tdDl.appendChild(a);
+
+      tr.appendChild(tdName);
+      tr.appendChild(tdSize);
+      tr.appendChild(tdTime);
+      tr.appendChild(tdDl);
+
+      tbody.appendChild(tr);
     }
   }
 
-  async function capturesCleanup(days){
-    const out = $('snifferOut');
-    if (out) out.textContent = 'Cleanup läuft…';
+  function extractCaptureNamesFromText(txt){
+    // Robust: unterstützt "files:"-Block und fallback per Regex
+    const names = new Set();
 
-    try{
-      const r = await fetch('/cgi-bin/captures.cgi?action=cleanup&days=' + encodeURIComponent(String(days)), { cache:'no-store' });
-      const j = await r.json();
-      if(out){
-        out.textContent = j.ok
-          ? `Cleanup: ${j.deleted} Datei(en) gelöscht (>${j.days} Tage)`
-          : `Cleanup-Fehler: ${j.error || 'unbekannt'}`;
+    const lines = (txt || '').split('\n');
+    const idx = lines.findIndex(l => l.trim() === 'files:');
+    if(idx >= 0){
+      for(let i = idx+1; i < lines.length; i++){
+        const s = lines[i].trim();
+        if(!s) continue;
+        if(s.endsWith(':')) break;
+        // häufige Formate: usb0-....pcap0 / tcpdump-wlan0-....pcap / .pcap1 etc.
+        if(/\.(pcap|cap)\d*$/i.test(s)) names.add(s);
       }
-      await capturesRefresh();
-    }catch(e){
-      if (out) out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+    }
+
+    // Regex fallback
+    const re = /\b[\w.-]+\.(?:pcap|cap)\d*\b/gi;
+    let m;
+    while((m = re.exec(txt || ''))){
+      names.add(m[0]);
+    }
+
+    return Array.from(names);
+  }
+
+  async function headInfoForCapture(name){
+    const href = '/captures/' + encodeURIComponent(name);
+    try{
+      const r = await fetch(href, { method:'HEAD', cache:'no-store' });
+      const len = r.headers.get('content-length');
+      const lm  = r.headers.get('last-modified');
+
+      const size = (len != null) ? Number(len) : NaN;
+      const time = (lm != null) ? Date.parse(lm) : NaN;
+
+      return {
+        name,
+        href,
+        size,
+        time,
+        sizeText: Number.isFinite(size) ? fmtBytes(size) : '-',
+        timeText: Number.isFinite(time) ? fmtTimeMs(time) : '-'
+      };
+    }catch(_e){
+      return { name, href, sizeText:'-', timeText:'-' };
     }
   }
 
-  // Initialer Auto-Status
+  async function snifferTextList(limit){
+    // Wir benutzen absichtlich sniffer.cgi als Quelle, weil captures.cgi bei dir nicht existiert.
+    // Falls action=captures nicht implementiert ist, fällt es auf action=status zurück.
+    limit = Number(limit || TCPDUMP_LIMIT_DEFAULT);
+
+    const tryUrls = [
+      '/cgi-bin/sniffer.cgi?action=captures&limit=' + encodeURIComponent(String(limit)),
+      '/cgi-bin/sniffer.cgi?action=list&limit=' + encodeURIComponent(String(limit)),
+      '/cgi-bin/sniffer.cgi?action=status'
+    ];
+
+    let lastText = '';
+    for(const url of tryUrls){
+      try{
+        const r = await fetch(url, { cache:'no-store' });
+        lastText = await r.text();
+        if(lastText && extractCaptureNamesFromText(lastText).length > 0) return lastText;
+      }catch(_e){
+        // continue
+      }
+    }
+    return lastText;
+  }
+
+  async function tcpdumpRefresh(){
+    const out = $('tcpdumpOut');
+    const limitEl = $('tcpdumpLimit');
+    const limit = Number(limitEl ? limitEl.textContent : TCPDUMP_LIMIT_DEFAULT) || TCPDUMP_LIMIT_DEFAULT;
+
+    // UI state
+    if(out && (!out.textContent || out.textContent.trim() === 'Bereit.')){
+      out.textContent = 'Lade Captures…';
+    }
+
+    try{
+      const txt = await snifferTextList(limit);
+      const names = extractCaptureNamesFromText(txt);
+
+      // Sortiere nach Name (typisch steckt Timestamp im Namen) absteigend
+      names.sort().reverse();
+
+      const limited = names.slice(0, limit);
+
+      // HEAD-Infos holen (parallel)
+      const infos = await Promise.all(limited.map(headInfoForCapture));
+
+      renderCapturesTable(infos);
+
+      // Wenn wir vorher "Lade..." gesetzt haben und jetzt fertig sind, nicht alles überschreiben:
+      if(out && out.textContent === 'Lade Captures…'){
+        out.textContent = 'Bereit.';
+      }
+    }catch(e){
+      renderCapturesTable([]);
+      if(out) out.textContent = 'Fehler beim Laden: ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function tcpdumpCleanup(days){
+    days = Number(days || 7);
+    const out = $('tcpdumpOut');
+    out.textContent = 'Cleanup läuft…';
+
+    // Wenn du (optional) bereits einen Cleanup in sniffer.cgi hast, nutzen wir ihn.
+    // Wenn nicht vorhanden, bekommst du die Fehlermeldung sauber angezeigt.
+    try{
+      const r = await fetch('/cgi-bin/sniffer.cgi?action=cleanup&days=' + encodeURIComponent(String(days)), { cache:'no-store' });
+      const t = await r.text();
+      out.textContent = t && t.trim() ? t.trim() : `Cleanup ausgeführt (>${days} Tage)`;
+    }catch(e){
+      out.textContent = 'Cleanup-Fehler: ' + (e && e.message ? e.message : e);
+    }
+
+    await tcpdumpRefresh();
+  }
+
+  // Initial
   document.addEventListener('DOMContentLoaded', () => {
     run('status');
     tcpdumpCtl('status');
-    capturesRefresh();
+    tcpdumpRefresh();
   });
 </script>
 </body>
