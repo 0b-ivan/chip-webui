@@ -141,6 +141,30 @@
         <small class="hint">Hinweis: Logs kommen aus <code>journalctl -u nextdns</code>.</small>
       </div>
     </section>
+    <!-- Card: Hotspot -->
+    <section class="card">
+      <div class="hd">
+        <h2>Hotspot</h2>
+        <p>AP-Modus für den USB-WLAN-Dongle (hostapd + dnsmasq)</p>
+      </div>
+
+      <div class="bd">
+        <div class="row">
+          <button type="button" onclick="hotspotStatus()">Status</button>
+          <button type="button" onclick="hotspotOn()">Hotspot an</button>
+          <button type="button" class="danger" onclick="hotspotOff()">Hotspot aus</button>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <input id="apSsid" placeholder="Hotspot-SSID" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+          <input id="apPass" placeholder="Passwort (min. 8 Zeichen, leer = offen*)" type="password" style="flex:2; padding:10px; border-radius:8px; border:1px solid #ccc;">
+          <button type="button" class="secondary" onclick="hotspotSave()">Speichern</button>
+        </div>
+
+        <pre id="hotspotOut">Bereit.</pre>
+        <small class="hint">*Offen nur, wenn du das im Backend erlaubst.</small>
+      </div>
+    </section>
 
   </div>
 
