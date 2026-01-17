@@ -48,7 +48,7 @@
           <button type="button" class="secondary" onclick="run('status')">Status</button>
           <button type="button" onclick="run('on')">Internet an</button>
           <button type="button" class="danger" onclick="run('off')">Internet aus</button>
-          <button class="secondary" onclick="run('shutdown')">Shutdown</button>
+          <button type="button" class="secondary" onclick="run('shutdown')">Shutdown</button>
         </div>
 
         <div id="out" class="out">Bereit.</div>
@@ -82,43 +82,75 @@
       </div>
     </section>
 
-    <!--Card 4 -->
-    <div class="card" style="margin-top:16px;">
-      <h2>Sniffer (usb0)</h2>
-      <p>PCAP-Mitschnitt für Analyse (offline). Rotiert automatisch, damit der Speicher nicht vollläuft.</p>
-
-      <div class="row">
-        <button onclick="sniffer('status')">Status</button>
-        <button onclick="sniffer('start')">Start</button>
-        <button class="secondary" onclick="sniffer('stop')">Stop</button>
-        <button class="secondary" onclick="openSnifferLive()">Live</button>
+    <!-- Card 4 -->
+    <section class="card">
+      <div class="hd">
+        <h2>Sniffer (tcpdump)</h2>
+        <p>PCAP-Mitschnitt zur Analyse. Rotiert automatisch; optional Cleanup (älter als 7 Tage).</p>
       </div>
 
-      <pre id="snifferOut">Bereit.</pre>
-      <div id="snifferLinks" class="linklist"></div>
-      <small>Downloads unter <code>/captures/</code> (z. B. <code>http://192.168.7.1/captures/...</code>).</small>
-    </div>
+      <div class="bd">
+        <div class="row">
+          <button type="button" onclick="tcpdumpCtl('status')">Status</button>
+          <button type="button" onclick="tcpdumpCtl('start')">Start</button>
+          <button type="button" class="secondary" onclick="tcpdumpCtl('stop')">Stop</button>
+          <button type="button" class="secondary" onclick="capturesRefresh()">Captures</button>
+          <button type="button" class="secondary" onclick="capturesCleanup(7)">Cleanup (7 Tage)</button>
+          <button type="button" class="secondary" onclick="openSnifferLive()">Live</button>
+        </div>
 
-<!-- Card: NextDNS -->
-<section class="card">
-  <div class="hd">
-    <h2>NextDNS</h2>
-    <p>DNS-Filter (ein/aus) + lokale Logs.</p>
+        <pre id="snifferOut">Bereit.</pre>
+        <pre id="snifferOut">Bereit.</pre>
+
+  <div class="hint" style="margin-top:8px;">
+    Zeige neueste Captures:
+    <select id="capLimit" onchange="capturesRefresh()">
+      <option value="10">10</option>
+      <option value="30" selected>30</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+    </select>
   </div>
 
-  <div class="bd">
-    <div class="row">
-      <button type="button" onclick="nextdns('status')">Status</button>
-      <button type="button" onclick="nextdns('on')">Ein</button>
-      <button type="button" class="danger" onclick="nextdns('off')">Aus</button>
-      <button type="button" class="secondary" onclick="nextdns('logs')">Logs</button>
-    </div>
-
-    <pre id="nextdnsOut">Bereit.</pre>
-    <small class="hint">Hinweis: Logs kommen aus <code>journalctl -u nextdns</code>.</small>
+  <div style="margin-top:10px; overflow:auto; max-height:260px; border:1px solid #ddd; border-radius:10px;">
+    <table style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:8px; border-bottom:1px solid #ddd;">Datei</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Größe</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Zeit</th>
+          <th style="text-align:right; padding:8px; border-bottom:1px solid #ddd;">Download</th>
+        </tr>
+      </thead>
+      <tbody id="capturesBody">
+        <tr><td colspan="4" style="padding:10px;">Keine Daten</td></tr>
+      </tbody>
+    </table>
   </div>
-</section>
 
+  <small class="hint">Captures liegen unter <code>/captures/</code>.</small>
+      </div>
+    </section>
+
+    <!-- Card: NextDNS -->
+    <section class="card">
+      <div class="hd">
+        <h2>NextDNS</h2>
+        <p>DNS-Filter (ein/aus) + lokale Logs.</p>
+      </div>
+
+      <div class="bd">
+        <div class="row">
+          <button type="button" onclick="nextdns('status')">Status</button>
+          <button type="button" onclick="nextdns('on')">Ein</button>
+          <button type="button" class="danger" onclick="nextdns('off')">Aus</button>
+          <button type="button" class="secondary" onclick="nextdns('logs')">Logs</button>
+        </div>
+
+        <pre id="nextdnsOut">Bereit.</pre>
+        <small class="hint">Hinweis: Logs kommen aus <code>journalctl -u nextdns</code>.</small>
+      </div>
+    </section>
   </div>
 
   <div class="footer">
@@ -127,59 +159,6 @@
 </div>
 
 <script>
-
-async function nextdns(action){
-  const out = document.getElementById('nextdnsOut');
-  out.textContent = 'Läuft…';
-  try{
-    const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
-    out.textContent = await r.text();
-  }catch(e){
-    out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
-  }
-}
-
-  function openSnifferLive(){
-    // separates Fenster
-    const w = window.open('', 'snifferLive', 'width=900,height=600');
-    w.document.write(`
-    <title>Sniffer Live</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-      body{font-family:sans-serif;margin:12px}
-      pre{background:#111;color:#eee;padding:12px;border-radius:8px;white-space:pre-wrap}
-      .row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-      button{padding:10px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}
-    </style>
-    <div class="row">
-      <button id="btnStop">Stop</button>
-      <div id="st">Verbinde…</div>
-    </div>
-    <pre id="log"></pre>
-  `);
-
-    const log = w.document.getElementById('log');
-    const st  = w.document.getElementById('st');
-    const es  = new w.EventSource('/cgi-bin/sniffer-live.cgi');
-
-    es.onmessage = (ev) => {
-      log.textContent = ev.data + "\n" + log.textContent;
-      st.textContent = 'Live…';
-    };
-    es.addEventListener('end', () => {
-      st.textContent = 'Beendet';
-      es.close();
-    });
-    es.onerror = () => {
-      st.textContent = 'Verbindung beendet/Fehler (neu öffnen zum reconnect)';
-      es.close();
-    };
-
-    w.document.getElementById('btnStop').onclick = () => {
-      st.textContent = 'Gestoppt';
-      es.close();
-    };
-  }
   function $(id){ return document.getElementById(id); }
 
   function setUi(state){
@@ -192,6 +171,11 @@ async function nextdns(action){
     dot.classList.remove('ok','err');
     if(state === 'OK') dot.classList.add('ok');
     else if(state === 'FEHLER') dot.classList.add('err');
+  }
+
+  async function api(path, opts){
+    const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
+    return await r.text();
   }
 
   async function run(action){
@@ -210,11 +194,7 @@ async function nextdns(action){
     }
   }
 
-  async function api(path, opts){
-    const r = await fetch(path, Object.assign({ cache:'no-store' }, opts||{}));
-    return await r.text();
-  }
-
+  // WLAN
   async function wifiStatus(){
     $('wifiOut').textContent = 'Läuft…';
     $('wifiOut').textContent = await api('/cgi-bin/wifi.cgi?action=status');
@@ -269,65 +249,145 @@ async function nextdns(action){
 
     $('wifiOut').textContent = txt;
   }
-  function renderSnifferLinks(text){
-    // erwartet Block:
-    // files:
-    // file1
-    // file2
-    const lines = text.split('\n');
-    const i = lines.findIndex(l => l.trim() === 'files:');
-    if(i === -1) return '';
 
-    const files = [];
-    for(let k=i+1; k<lines.length; k++){
-      const s = lines[k].trim();
-      if(!s) continue;
-      if(s.endsWith(':')) break; // nächster Abschnitt (download_hint:, etc.)
-      files.push(s);
-    }
-
-    if(files.length === 0) return '\n\n(no files)';
-
-    const links = files.map(f => `- http://192.168.7.1/captures/${encodeURIComponent(f)}`).join('\n');
-    return '\n\nDownload links:\n' + links;
-  }
-
-  async function sniffer(action){
-    const out = document.getElementById('snifferOut');
+  // NextDNS (nur einmal definiert, mit Fehlerbehandlung)
+  async function nextdns(action){
+    const out = document.getElementById('nextdnsOut');
     out.textContent = 'Läuft…';
-    try {
-      const r = await fetch('/cgi-bin/sniffer.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
-      const t = await r.text();
-      out.textContent = t + renderSnifferLinks(t);
-    } catch (e) {
+    try{
+      const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache: 'no-store' });
+      out.textContent = await r.text();
+    }catch(e){
       out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
     }
   }
-  async function nextdns(action){
-  const out = document.getElementById('nextdnsOut');
-  out.textContent = 'Läuft…';
-  const r = await fetch('/cgi-bin/nextdns.cgi?action=' + encodeURIComponent(action), { cache:'no-store' });
-  out.textContent = await r.text();
-}
 
-async function nextdnsSetConfig(){
-  const out = document.getElementById('nextdnsOut');
-  const id = document.getElementById('nextdnsId').value.trim();
-  if(!id){ out.textContent = 'ERROR: config id fehlt'; return; }
-  out.textContent = 'Setze…';
-  const body = new URLSearchParams({ config_id:id }).toString();
-  const r = await fetch('/cgi-bin/nextdns.cgi?action=setconfig', {
-    method:'POST',
-    headers:{ 'Content-Type':'application/x-www-form-urlencoded' },
-    body
-  });
-  out.textContent = await r.text();
-}
+  // Sniffer Live (SSE)
+  function openSnifferLive(){
+    const w = window.open('', 'snifferLive', 'width=900,height=600');
+    w.document.write(`
+    <title>Sniffer Live</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body{font-family:sans-serif;margin:12px}
+      pre{background:#111;color:#eee;padding:12px;border-radius:8px;white-space:pre-wrap}
+      .row{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+      button{padding:10px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;cursor:pointer}
+    </style>
+    <div class="row">
+      <button id="btnStop">Stop</button>
+      <div id="st">Verbinde…</div>
+    </div>
+    <pre id="log"></pre>
+  `);
 
+    const log = w.document.getElementById('log');
+    const st  = w.document.getElementById('st');
+    const es  = new w.EventSource('/cgi-bin/sniffer-live.cgi');
 
-  // Initialer Auto-Status (optional)
+    es.onmessage = (ev) => {
+      log.textContent = ev.data + "\n" + log.textContent;
+      st.textContent = 'Live…';
+    };
+    es.addEventListener('end', () => {
+      st.textContent = 'Beendet';
+      es.close();
+    });
+    es.onerror = () => {
+      st.textContent = 'Verbindung beendet/Fehler (neu öffnen zum reconnect)';
+      es.close();
+    };
+
+    w.document.getElementById('btnStop').onclick = () => {
+      st.textContent = 'Gestoppt';
+      es.close();
+    };
+  }
+
+  // tcpdump Control (cgi-bin/tcpdump.cgi)
+  async function tcpdumpCtl(action){
+    const out = $('snifferOut');
+    if (out) out.textContent = 'Läuft…';
+
+    try{
+      const r = await fetch('/cgi-bin/tcpdump.cgi?action=' + encodeURIComponent(action) + '&iface=wlan0', { cache: 'no-store' });
+      const j = await r.json();
+
+      if (out) out.textContent = `${j.action} (${j.iface}): ${j.result}`;
+      if (action === 'start' || action === 'stop' || action === 'status') {
+        await capturesRefresh();
+      }
+    }catch(e){
+      if (out) out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  function fmtBytes(n){
+    if (!Number.isFinite(n)) return '-';
+    const u = ['B','KB','MB','GB'];
+    let i = 0;
+    while(n >= 1024 && i < u.length-1){ n/=1024; i++; }
+    return (i===0 ? n.toFixed(0) : n.toFixed(1)) + ' ' + u[i];
+  }
+
+  function fmtTime(epoch){
+    if(!epoch) return '-';
+    return new Date(epoch*1000).toLocaleString();
+  }
+
+  async function capturesRefresh(){
+    const box = $('snifferLinks');
+    if (box) box.textContent = 'Lade Captures…';
+
+    try{
+      const r = await fetch('/cgi-bin/captures.cgi?action=list&limit=30', { cache:'no-store' });
+      const j = await r.json();
+      if(!j.ok){
+        if (box) box.textContent = 'Fehler: ' + (j.error || 'unbekannt');
+        return;
+      }
+
+      const caps = j.captures || [];
+      if(caps.length === 0){
+        if (box) box.textContent = '(keine Captures)';
+        return;
+      }
+
+      // Linkliste rendern
+      const lines = caps.map(c => {
+        const href = '/captures/' + encodeURIComponent(c.name);
+        return `- ${c.name}  (${fmtBytes(Number(c.size))}, ${fmtTime(Number(c.mtime))})\n  ${location.origin}${href}`;
+      }).join('\n');
+
+      if (box) box.textContent = lines;
+    }catch(e){
+      if (box) box.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  async function capturesCleanup(days){
+    const out = $('snifferOut');
+    if (out) out.textContent = 'Cleanup läuft…';
+
+    try{
+      const r = await fetch('/cgi-bin/captures.cgi?action=cleanup&days=' + encodeURIComponent(String(days)), { cache:'no-store' });
+      const j = await r.json();
+      if(out){
+        out.textContent = j.ok
+          ? `Cleanup: ${j.deleted} Datei(en) gelöscht (>${j.days} Tage)`
+          : `Cleanup-Fehler: ${j.error || 'unbekannt'}`;
+      }
+      await capturesRefresh();
+    }catch(e){
+      if (out) out.textContent = 'Fehler: ' + (e && e.message ? e.message : e);
+    }
+  }
+
+  // Initialer Auto-Status
   document.addEventListener('DOMContentLoaded', () => {
     run('status');
+    tcpdumpCtl('status');
+    capturesRefresh();
   });
 </script>
 </body>
